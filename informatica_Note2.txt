@@ -1,0 +1,210 @@
+1.*:零个或多个字符
+  ?:一个字符
+  ^:行开始
+  $:行结尾
+  ^$:空行
+2.wc:统计文档的行数、字符数、词数，常用的选项为：
+  -l:统计行数(line)
+  -m:统计字符数
+  -w:统计词数(word)
+3.字符转换命令:tr,col,join,paste,expand
+  tr [-ds] str1 ...
+  -d:删除str1字符串
+  -s:取代掉重复的字符
+  小写变大写:tr ‘[a-z]’ ‘[A-Z]’, tr -d ':'
+  col [-xb]
+  -x:将tab键转换成对等的空格键
+  join [-ti12] file1 file2
+  -t:join 默认以空格符分割数据，并且比对第一个字段的数据,
+  -i:忽略大小写的差异
+  -1:第一个文件要用的字段分析
+  -2:同上
+  例:join -t ':' -1 4 file1 -2 3 file2
+  paste [-d] file1 file2:将两行贴在一起，中间用tab键隔开
+  -d:后面接分隔符
+  -:file部分写成-,代表的时standard input.
+  expand:将tab键转换成空格键
+  expand [-t] file/-
+  -t:后面接数字，表示多少个空格键,一般来说,一个tab可以用8个空格键代替
+  
+
+
+
+  
+5.sed [-hnV][-e<script>][-f<script文件>][文本文件]
+    -e<script>或--expression=<script> 以选项中指定的script来处理输入的文本文件。
+	-f<script文件>或--file=<script文件> 以选项中指定的script文件来处理输入的文本文件。
+    -h或--help 显示帮助。
+    -n或--quiet或--silent 仅显示script处理后的结果。
+    -V或--version 显示版本信息。
+    a ：新增， a 的后面可以接字串，而这些字串会在新的一行出现(目前的下一行)～
+	c ：取代， c 的后面可以接字串，这些字串可以取代 n1,n2 之间的行！
+	d ：删除，因为是删除啊，所以 d 后面通常不接任何咚咚；
+	i ：插入， i 的后面可以接字串，而这些字串会在新的一行出现(目前的上一行)；
+	p ：打印，亦即将某个选择的数据印出。通常 p 会与参数 sed -n 一起运行～
+	s ：取代，可以直接进行取代的工作哩！通常这个 s 的动作可以搭配正规表示法！例如 1,20s/old/new/g 就是啦！
+    nl /etc/passwd | sed '2a drink tea':
+	nl /etc/passwd | sed '2i drink tea':
+	nl /etc/passwd | sed '2,5c No 2-5 number':
+	nl /etc/passwd | sed -n '/bash/{s/bash/blueshell/;p;q}':
+    sed -n ‘n’p filename :打印第n行
+    sed -n ‘n’d filename :删除第n行
+    sed -n ‘n s/str1/str2/g’ filename :替换n行的str1为str2,'s'是替换的命令，'g'表示全局替换。
+    sed -n '/str1/'p filename :打印匹配str1的行
+	sed -e 4a\newline testfile #使用sed 在第四行后添加新字符串  
+
+6.awk -F ':' '{print $1}' filename:
+  $0:整行
+  awk '/str1/' filename:匹配字符或字符串
+  awk -F ':' '$1~/str1/' filename:
+  awk的内置变量: NF:用分隔符分隔后一共有多少段；
+                 NR:行数
+7.数学计算要用’[ ]’括起来并且外头要带一个’$’.
+  read -p "Please input a number" x:
+  if条件两种写法:if((a<60));if [$a -lt 60];
+8.Shell中调用另一个脚本的方法：
+  source 路径+filename;
+  .路径+filename;
+  sh 路径+filename;
+
+
+ 
+10.使用stat可以查看文件的atime、ctime、mtime
+11.反引号（` `）：在反引号中的字符串将解释成shell命令来执行。
+12.pmcmd startworkflow -sv SeverName -d DomainName -u UserName -p Password -f FolderName -wait WFName
+13.exit 1:非正常运行导致退出程序
+   exit 0:正常运行程序并退出程序
+14.file:辨识文件类型
+   file filenhame
+
+16.tar
+   -c:新建打包文件
+   -t ：查看打包文件的内容含有哪些文件名
+   -x ：解打包或解压缩的功能，可以搭配-C（大写）指定解压的目录，注意-c,-t,-x不能同时出现在同一条命令中
+   -j ：通过bzip2的支持进行压缩/解压缩
+   -z ：通过gzip的支持进行压缩/解压缩
+   -v ：在压缩/解压缩过程中，将正在处理的文件名显示出来
+   -f filename ：filename为要处理的文件
+   -C dir ：指定压缩/解压缩的目录dir
+   压缩：tar -jcv -f filename.tar.bz2 要被处理的文件或目录名称
+   查询：tar -jtv -f filename.tar.bz2
+   解压：tar -jxv -f filename.tar.bz2 -C 欲解压缩的目录
+17.文件比较运算符
+   -e filename 	如果 filename存在，则为真 	[ -e /var/log/syslog ]
+   -d filename 	如果 filename为目录，则为真 	[ -d /tmp/mydir ]
+   -f filename 	如果 filename为常规文件，则为真 	[ -f /usr/bin/grep ]
+   -L filename 	如果 filename为符号链接，则为真 	[ -L /usr/bin/grep ]
+   -r filename 	如果 filename可读，则为真 	[ -r /var/log/syslog ]
+   -w filename 	如果 filename可写，则为真 	[ -w /var/mytmp.txt ]
+   -x filename 	如果 filename可执行，则为真 	[ -L /usr/bin/grep ]
+
+19.IF [expr1 -a/-o expr2]:
+   -a:and/&&
+   -o:or/||
+20.vi命令列表
+   命令模式下一些键的功能：
+   h:左移光标一个字符
+   l:右移光标一个字符
+   k:光标上移一行
+   j:光标下移一行
+   ^:光标移动至行首
+   0:数字"0"，光标移至文章的开头
+   G:光标移至文章的最后
+   $:光标移动至行尾
+   Ctrl+f:向前翻屏
+   Ctrl+b:向后翻屏
+   Ctrl+d:向前翻半屏
+   Ctrl+u:向后翻半屏
+   i:在光标位置前插入字符
+   a:在光标所在位置的后一个字符开始增加
+   o:插入新的一行，从行首开始输入
+   ESC:从输入状态退至命令状态
+   x:删除光标后面的字符
+   #x:删除光标后的＃个字符
+   X:(大写X)，删除光标前面的字符
+   #X:删除光标前面的#个字符
+   dd:删除光标所在的行
+   #dd:删除从光标所在行数的#行
+   yw:复制光标所在位置的一个字
+   #yw:复制光标所在位置的#个字
+   yy:复制光标所在位置的一行
+   #yy:复制从光标所在行数的#行
+   p:粘贴
+   u:取消操作
+   cw:更改光标所在位置的一个字
+   #cw:更改光标所在位置的#个字
+   行命令模式下的一些指令：
+   w filename:储存正在编辑的文件为filename
+   wq filename:储存正在编辑的文件为filename，并退出vi
+   q!:放弃所有修改，退出vi
+   set nu:显示行号
+   /或?:查找，在/后输入要查找的内容
+   n:与/或?一起使用，如果查找的内容不是想要找的关键字，按n或向后（与/联用）或向前（与?联用）继续查找，直到找到为止。
+21.创建文件:touch+文件名 如:touch a.txt
+22.mkdir dir1 创建一个叫做 'dir1' 的目录' 
+23.test:用于检查某个条件是否成立，它可以进行数值、字符和文件三个方面的测试。
+        数值:-eq,-ne,-gt,-ge,-lt,-le 
+		字符:=,!=,-z 字符串(字符串的长度为零则为真),-n 字符串(字符串的长度不为零则为真)
+		文件:-e 文件名,-r 文件名,-w 文件名,-x 文件名,-d 文件名,-f 文件名,
+		     -c 文件名 (如果文件存在且为字符型特殊文件则为真)
+             -b 文件名 (如果文件存在且为块特殊文件则为真)
+			 -s 文件名 (如果文件存在且至少有一个字符则为真)
+24.nl:读取 File 参数（缺省情况下标准输入），计算输入中的行号，将计算过的行号写入标准输出。
+25.chmod：改变文件权限
+   chmod [-cfvR] [--help] [--version] mode file...,   mode 格式:[ugoa...][[+-=][rwxX]...][,...]
+     u 表示该文件的拥有者，g 表示与该文件的拥有者属于同一个群体(group)者，o 表示其他以外的人，a 表示这三者皆是。
+	 + 表示增加权限、- 表示取消权限、= 表示唯一设定权限。
+	 r 表示可读取，w 表示可写入，x 表示可执行，X 表示只有当该文件是个子目录或者该文件已经被设定过为可执行。
+	 其他参数说明：
+	 -c : 若该文件权限确实已经更改，才显示其更改动作
+	 -f : 若该文件权限无法被更改也不要显示错误讯息
+	 -v : 显示权限变更的详细资料
+	 -R : 对目前目录下的所有文件与子目录进行相同的权限变更(即以递回的方式逐个变更)
+	 --help : 显示辅助说明
+	 --version : 显示版本
+	 chmod (-R) xyz file_name/direct_name,如:chmod -R 770 folder1 (r:4,w:2,x:1)
+	 chmod (-R) u=(rwx),g=(rwx),u=(rwx) file_name/direct_name
+
+27.cal,date,bs(计算器,输入quit退出)
+28.pwd:显示当前目录
+29.cp -p:连同文件的属性(权限、用户、时间)一起复制过去，而非使用默认属性(备份常用) -a :-pdr
+30.basename,dirname
+31.压缩:gzip,bzip2,xz,解压:gzip -d,bzip2 -d,xz -d
+   打包:tar
+32.alias ll='ls -l'
+33.kill=^U
+34.$?:回传值,0表示前一个指令执行结果正确
+   &&,||,
+   指令1 || 指令2 &&指令三
+36.排序命令:sort,wc,uniq
+37.split [-bl] file PREFIX
+   -b:后接分区文件大小,m,k,b,
+   -l:以行数进行分区
+   PREFIX:分区文件前缀
+   例:split -b 300k file1 file1
+   
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+

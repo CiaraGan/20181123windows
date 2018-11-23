@@ -1,0 +1,118 @@
+#习题1：打印如下菱形图案：
+#     .
+#    . .
+#   . . .
+#  . . . .
+# . . . . .
+#  . . . .
+#   . . .
+#    . .
+#     .
+
+#/usr/bin/bash
+
+var=5
+echo "The number is $var"
+
+for i in $(seq $var)
+do   
+    for ((k=1;k<=var-i;k++))
+	do 
+		echo -n " "
+	done
+	for((j=1;j<=i;j++))
+	do
+	    echo -n " ."
+	done
+	echo ""
+done
+
+for ((i=var-1;i>=1;i--))
+do   
+    for ((k=1;k<=var-i;k++))
+	do 
+		echo -n " "
+	done
+	for((j=1;j<=i;j++))
+	do
+	    echo -n " ."
+	done
+	echo ""
+done
+
+
+
+
+
+#习题2：对成绩进行判断，要求输入一个正整数，以60分，85分为界输出不同的评语
+
+read -p "Please input your score: " score
+
+if [[ $score =~ [^0-9] ]] ;then
+        echo "please input a positive integer"
+        exit 10       
+elif [ $score -gt 100 ];then ----等同于  elif((score>100))
+        echo "Your score is wrong"
+        exit 20
+elif [ $score -ge 85 ];then
+        echo "Your score is very good"
+elif [ $score -ge 60 ];then
+        echo "Your score is soso"
+else
+        echo "You have to work hard"
+fi  
+
+#习题3：斐波那契数列又称黄金分割数列，因数学家列昂纳多·斐波那契以兔子繁殖为例子而引入，故又称为"兔子数列"，
+指的是这样一个数列：0、1、1、2、3、5、8、13、21、34、……，斐波纳契数列以如下被以递归的方法定义：
+F（0）=0，F（1）=1，F（n）=F(n-1)+F(n-2)（n≥2）。请输入n值，打印斐波那契数列
+
+方法1：利用迭代的方法得出前n个斐波那契数列
+read -p "请输入n值：" num
+i=0
+while [ $i -le $num ]  ;do
+    if [ $i -eq 0 ];then
+        num1=0
+        echo $num1
+    elif [ $i -eq 1 ];then
+        num2=1
+        echo $num2
+    else
+        tmp=$num2
+        let num2=num1+num2
+        num1=$tmp
+        echo $num2
+        #let num2=num1+num2
+        #echo $num2
+    fi
+    let i++
+done
+
+方法2：利用递归的方法得出第n个斐波那契数
+    if [ $1 -eq 0 ];then
+        echo 0
+    elif [ $1 -eq 1 ];then
+        echo 1
+    else
+        echo $[$(fibo $[$1-1])+$(fibo $[$1-2])]
+    fi
+}
+fibo $1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

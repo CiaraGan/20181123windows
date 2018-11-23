@@ -1,0 +1,119 @@
+参数的维护系统对参数进行维护完成后, 修改参数对应字段 sync_st='0'(待同步)和 sync_bat_no=999999999
+参数同步应用在同步参数时, 计算参数的批次号 sync_bat_no, 在同步完成后修改参数对应字段 sync_st='2'(成功,'3'表示失败)
+
+today_sync_in/support_today_sync_in: T+0同步标志,1表示支持, 0表示不支持
+rec_id: 记录编码, 无意义, 保证唯一
+task_st: 任务状态, 0表示待执行, 1表示正在执行中, 2表示成功, 3表示失败, 4表示配置错误, 5表示部分完成部分正在同步, 6表示没有需要同步的对应参数
+oper_st: 操作状态
+sync_tp: 同步类型
+enable_sync: 是否可以同步, 1表示可以, 2表示不可以
+
+参数同步流程:
+...
+
+
+tbl_mcmgm_task_sch 向 tbl_mcmgm_task_sch_tmp 插入一条数据, 并且运行 wkf_task
+
+1.参数状态处理 wkf_task
+ses_task_manage_new(map_task_manage_new)-->ses_task_monitor(map_wkf_monitor)-->ses_wkf_name(map_wkf_name)-->cd $HOME/parasync/shell;sh extractpara.sh
+(1)map_task_manage_new:
+s: TBL_MCMGM_TASK_SCH_TMP
+t: TBL_MCMGM_TASK_SCH_TMP, TBL_MCMGM_TASK_SCH, FLAT_ETL_CONDITION
+		TBL_MCMGM_TASK_SCH_TMP: 更新, task_req_ts-->sysydate, task_id-->sync_bat_no, task_st-->'1'
+		TBL_MCMGM_TASK_SCH: 更新, task_st-->'1'
+		FLAT_ETL_CONDITION: 写入 today_sync_in
+(2)map_wkf_monitor:
+s: TBL_MAMGM_BAT_NO, TBL_MAMGM_PARA_SYNC_CFG, TBL_MAMGM_SYNC_OPER_MONI, TBL_MCMGM_TASK_SCH_TMP
+t: TBL_MAMGM_BAT_NO, TBL_MAMGM_SYNC_OPER_MONI, TBL_MCMGM_TASK_SCH, TBL_MCMGM_TASK_SCH_TMP
+		TBL_MAMGM_SYNC_OPER_MONI: 插入, resv_fld1-->0, resv_fld2-->0,resv_fld3-->0, begin_ts-->sysdate, oper_st-->0, sync_bat_no
+		TBL_MAMGM_BAT_NO: 更新, sync_bat_no
+		TBL_MCMGM_TASK_SCH: 更新, sync_bat_no 
+		TBL_MCMGM_TASK_SCH_TMP: 更新, sync_bat_no
+(3)map_wkf_name:
+s: TBL_MAMGM_PARA_SYNC_CFG, TBL_MCMGM_TASK_SCH_TMP
+t: FLAT_WKF_NAME, TBL_MCMGM_TASK_SCH, TBL_MCMGM_TASK_SCH_TMP
+		FLAT_WKF_NAME: ETL_NAME
+		TBL_MCMGM_TASK_SCH: 更新, 当没有要同步的系统时, task_st-->'4'
+		TBL_MCMGM_TASK_SCH_TMP: 删除, 当没有要同步的系统时
+2.数据抽取 wkf_ins_inf_extract
+ses_update_ins_inf_begin(map_update_ins_inf_begin)-->ses_ins_inf_extract(map_ins_inf_extract)-->ses_update_ins_inf_end(map_update_ins_inf_end)
+-->cd $HOME/parasync/shell;sh nphup_workflow.sh
+(1)map_update_ins_inf_begin:
+S: TBL_MCMGM_INS_INF
+t: TBL_MCMGM_INS_INF, TMP_MCMGM_INS_INF
+		TBL_MCMGM_INS_INF: 更新, sync_st-->'1', sync_bat_no-->sync_bat_no1(sync_st='1'?new_sync_bat_no=999999999:sync_bat_no1, sync_bat_no=new_sync_bat_no), sync_ts-->sysdate
+		TMP_MCMGM_INS_INF: 更新, sync_st-->'1', sync_bat_no-->sync_bat_no1, sync_ts-->sysdate
+(2)map_ins_inf_extract
+s: TBL_MCMGM_INS_INF, TBL_MCMGM_TASK_SCH_TMP(sync_bat_no,sync_st='1',para_cd='05')
+t: TBL_MCMGM_INS_INF_SYNC
+		TBL_MCMGM_INS_INF_SYNC: 更新/插入
+(3)map_update_ins_inf_end
+s:TBL_MCMGM_TASK_SCH_TMP
+t:TBL_MCMGM_INS_INF, TMP_MCMGM_INS_INF
+		TBL_MCMGM_INS_INF: 更新, sync_st-->'2', sync_ts-->sysdate
+		TMP_MCMGM_INS_INF: 更新, sync_st-->'2', sync_ts-->sysdate
+(4)map_update_ins_inf_fail
+s:TBL_MCMGM_TASK_SCH_TMP
+t:TBL_MCMGM_INS_INF, TMP_MCMGM_INS_INF
+		TBL_MCMGM_INS_INF: 更新, sync_st-->'3', sync_ts-->sysdate
+		TMP_MCMGM_INS_INF: 更新, sync_st-->'3', sync_ts-->sysdate
+(5)map_update_monitor_all_fail
+3.数据同步 wkf_ins_inf_synch02
+ses_clear_pamgm_ins_inf02(map_clear_pamgm_ins_inf)-->ses_synch_ins_inf02(map_synch_ins_inf02)-->ses_update_supp_stat02(map_update_supp_stat02)
+-->ses_count_ins_inf02(map_count_ins_inf02)-->ses_update_monitor02_succ(map_update_monitor02_succ)-->ses_check_monitor_handle_task(map_check_monitor_handle_task)
+-->cd $HOME/parasync/shell;sh handleTask.sh
+(1)map_clear_pamgm_ins_inf
+s: TBL_MCMGM_TASK_SCH_TMP
+t: ETL_PAMGM_INS_INF
+		ETL_PAMGM_INS_INF: 删除
+(2)map_synnch_ins_inf02:
+s: TBL_MCMGM_TASK_SCH_TMP, TBL_MCMGM_INS_INF_SYNC
+t: ETL_PAMGM_INS_INF, TBL_MAMGM_SYNC_OPER_MONI
+		ETL_PAMGM_INS_INF: 更新/插入, sync_ts-->sysdate, sync_st-->'0', event_id-->0
+		TBL_MAMGM_SYNC_OPER_MONI: 更新, resv_fld3
+(3)map_update_supp_stat02:
+s: TBL_MCMGM_TASK_SCH_TMP
+t: TBL_PAMGM_PUB_PARA_SYNC_TASK
+	TBL_PAMGM_PUB_PARA_SYNC_TASK：更新
+(4)map_count_ins_inf02
+s: ETL_PAMGM_INS_INF
+t: TBL_MAMGM_SYNC_OPER_MONI
+		TBL_MAMGM_SYNC_OPER_MONI: 更新, resv_fld2
+(5)map_update_monitor02_succ
+s: TBL_MCMGM_TASK_SCH_TMP, TBL_MAMGM_SYNC_OPER_MONI
+t: TBL_MAMGM_SYNC_OPER_MONI
+	TBL_MAMGM_SYNC_OPER_MONI: 更新, oper_st-->'2', end_ts-->sysdate
+(6)map_check_monitor_handle_task
+s: TBL_MCMGM_TASK_SCH_TMP
+t: FLAT_HANDLE_TASK, TBL_MCMGM_TASK_SCH
+	FLAT_HANDLE_TASK: 'wkf_handle_task'/''
+	TBL_MCMGM_TASK_SCH: 更新, task_st-->'2'/'5'
+(7)map_update_monitor02_succ
+s: TBL_MCMGM_TASK_SCH_TMP, TBL_MAMGM_SYNC_OPER_MONI
+t: TBL_MAMGM_SYNC_OPER_MONI
+	TBL_MAMGM_SYNC_OPER_MONI: 更新, oper_st-->'3', end_ts-->sysdate
+4.数据检查和更新下游系统任务表
+5.更新监控表 wkf_handle_task
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
